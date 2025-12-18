@@ -154,8 +154,6 @@ function App() {
         {error && (
           <div className="error-message">
             ⚠️ {error}
-            <br />
-            <small>참고: 무료 API는 호출 제한이 있습니다. 실제 사용을 위해서는 Alpha Vantage에서 API 키를 발급받으세요.</small>
           </div>
         )}
 
@@ -216,12 +214,10 @@ function App() {
           </ol>
           
           <div className="api-note">
-            <strong>API 설정:</strong> 이 앱은 Alpha Vantage API를 사용합니다. 
-            무료 키 발급: <a href="https://www.alphavantage.co/support/#api-key" target="_blank" rel="noopener noreferrer">
-              https://www.alphavantage.co/support/#api-key
-            </a>
+            <strong>API 정보:</strong> 이 앱은 <strong>Yahoo Finance API</strong>를 사용합니다. 
+            API 키가 필요 없으며 무료로 사용할 수 있습니다.
             <br />
-            API 키를 발급받은 후, <code>src/App.jsx</code> 파일의 <code>API_KEY</code> 변수를 수정하세요.
+            <small>데이터 제공: Yahoo Finance | CORS 프록시: allorigins.win</small>
           </div>
         </div>
       </main>
