@@ -208,14 +208,22 @@ function App() {
           </div>
           
           {/* 현재 가격 표시 태그 */}
-          <div className="current-price-tag">
-            <span className="price-label">현재 가격:</span>
-            <span className="price-value">
-              {getCurrentPrice() !== null 
-                ? `$${getCurrentPrice().toFixed(2)}` 
-                : error ? 'NULL' : '0'}
-            </span>
-          </div>
+          {stockData && (
+            <div className="current-price-tag">
+              <span className="price-label">현재 가격:</span>
+              <span className="price-value">
+                {getCurrentPrice() !== null 
+                  ? `$${getCurrentPrice().toFixed(2)}` 
+                  : 'NULL'}
+              </span>
+              {stockData.isAfterHours && stockData.regularMarketPrice && (
+                <span className="price-source">(에프터마켓)</span>
+              )}
+              {stockData.isPreMarket && (
+                <span className="price-source">(프리마켓)</span>
+              )}
+            </div>
+          )}
         </div>
 
         {error && (
@@ -275,6 +283,24 @@ function App() {
                 <span className="detail-label">거래량:</span>
                 <span className="detail-value">{parseInt(stockData.volume).toLocaleString()}</span>
               </div>
+              {stockData.isAfterHours && stockData.regularMarketPrice && (
+                <div className="detail-row highlight-row">
+                  <span className="detail-label">장중 종가:</span>
+                  <span className="detail-value">${stockData.regularMarketPrice.toFixed(2)}</span>
+                </div>
+              )}
+              {stockData.postMarketPrice && stockData.isAfterHours && (
+                <div className="detail-row highlight-row">
+                  <span className="detail-label">에프터마켓:</span>
+                  <span className="detail-value highlight-value">${stockData.postMarketPrice.toFixed(2)}</span>
+                </div>
+              )}
+              {stockData.preMarketPrice && stockData.isPreMarket && (
+                <div className="detail-row highlight-row">
+                  <span className="detail-label">프리마켓:</span>
+                  <span className="detail-value highlight-value">${stockData.preMarketPrice.toFixed(2)}</span>
+                </div>
+              )}
               <div className="detail-row">
                 <span className="detail-label">전일 종가:</span>
                 <span className="detail-value">${stockData.previousClose.toFixed(2)}</span>
