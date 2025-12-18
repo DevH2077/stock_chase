@@ -8,6 +8,14 @@ function App() {
   const [error, setError] = useState(null)
   const intervalRef = useRef(null)
 
+  // 앱 초기화 로그
+  useEffect(() => {
+    console.log('🚀 주식 모니터 v2.0.0 시작', {
+      timestamp: new Date().toISOString(),
+      defaultSymbol: 'RKLB'
+    })
+  }, [])
+
   // 현재 가격 가져오기 (오류나 없으면 NULL 또는 0 반환)
   const getCurrentPrice = () => {
     if (!stockData || !stockData.price) {
@@ -68,9 +76,26 @@ function App() {
       const isPreMarket = marketState === 'PRE' || marketState === 'PREPRE'
       const isClosed = marketState === 'CLOSED'
       
+      console.log('📊 시장 상태 정보:', {
+        marketState,
+        isAfterHours,
+        isPreMarket,
+        isClosed,
+        regularMarketPrice: meta.regularMarketPrice,
+        postMarketPrice: meta.postMarketPrice,
+        preMarketPrice: meta.preMarketPrice,
+        previousClose: meta.previousClose
+      })
+      
       // 현재 가격 결정: 에프터마켓 > 장중 > 프리마켓 > 전일 종가
       const currentPrice = meta.postMarketPrice || meta.regularMarketPrice || meta.preMarketPrice || meta.previousClose || 0
       const previousClose = meta.previousClose || currentPrice
+      
+      console.log('💰 가격 정보:', {
+        currentPrice,
+        previousClose,
+        priceSource: meta.postMarketPrice ? '에프터마켓' : meta.regularMarketPrice ? '장중' : meta.preMarketPrice ? '프리마켓' : '전일종가'
+      })
       
       // 변화량 계산 (에프터마켓이면 에프터마켓 기준, 아니면 장중 기준)
       let change, changePercent
@@ -112,7 +137,14 @@ function App() {
       }
 
       setStockData(stockInfo)
-      console.log('✅ 주식 데이터 로드 성공:', stockInfo)
+      console.log('✅ 주식 데이터 로드 성공 (v2):', {
+        symbol: stockInfo.symbol,
+        price: stockInfo.price,
+        change: stockInfo.change,
+        changePercent: stockInfo.changePercent,
+        marketStatus: stockInfo.marketStatus,
+        timestamp: new Date().toISOString()
+      })
     } catch (err) {
       setError(`오류 발생: ${err.message}`)
       console.error('주식 조회 오류:', err)
@@ -124,17 +156,20 @@ function App() {
   // 실시간 업데이트 시작/중지
   useEffect(() => {
     if (symbol) {
+      console.log('🔄 주식 모니터 v2 시작:', { symbol, timestamp: new Date().toISOString() })
       // 즉시 한 번 조회
       fetchStockPrice()
       
       // 1분마다 업데이트 (무료 API 제한을 고려)
       intervalRef.current = setInterval(() => {
+        console.log('⏰ 자동 업데이트 실행:', { symbol, timestamp: new Date().toISOString() })
         fetchStockPrice()
       }, 60000) // 60초
     }
 
     return () => {
       if (intervalRef.current) {
+        console.log('🛑 주식 모니터 중지:', { symbol })
         clearInterval(intervalRef.current)
       }
     }
@@ -144,13 +179,14 @@ function App() {
 
   // 수동 새로고침
   const handleRefresh = () => {
+    console.log('🔄 수동 새로고침 실행:', { symbol, timestamp: new Date().toISOString() })
     fetchStockPrice()
   }
 
   return (
     <div className="app">
       <header className="app-header">
-        <h1>📈 주식 모니터</h1>
+        <h1>📈 주식 모니터 <span className="version-badge">v2</span></h1>
         <p className="subtitle">실시간 주식 시세 확인</p>
       </header>
 
