@@ -62,10 +62,34 @@ function App() {
         return
       }
 
-      const currentPrice = meta.regularMarketPrice || meta.previousClose || 0
+      // 시장 상태 확인 및 가격 결정
+      const marketState = meta.marketState || 'REGULAR'
+      const isAfterHours = marketState === 'POST' || marketState === 'POSTPOST'
+      const isPreMarket = marketState === 'PRE' || marketState === 'PREPRE'
+      const isClosed = marketState === 'CLOSED'
+      
+      // 현재 가격 결정: 에프터마켓 > 장중 > 프리마켓 > 전일 종가
+      const currentPrice = meta.postMarketPrice || meta.regularMarketPrice || meta.preMarketPrice || meta.previousClose || 0
       const previousClose = meta.previousClose || currentPrice
-      const change = currentPrice - previousClose
-      const changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
+      
+      // 변화량 계산 (에프터마켓이면 에프터마켓 기준, 아니면 장중 기준)
+      let change, changePercent
+      if (isAfterHours && meta.postMarketPrice) {
+        change = meta.postMarketPrice - previousClose
+        changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
+      } else if (isPreMarket && meta.preMarketPrice) {
+        change = meta.preMarketPrice - previousClose
+        changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
+      } else {
+        change = (meta.regularMarketPrice || currentPrice) - previousClose
+        changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
+      }
+      
+      // 시장 상태 텍스트
+      let marketStatus = '장중'
+      if (isAfterHours) marketStatus = '에프터마켓'
+      else if (isPreMarket) marketStatus = '프리마켓'
+      else if (isClosed) marketStatus = '장마감'
       
       const stockInfo = {
         symbol: meta.symbol || symbol,
@@ -76,8 +100,15 @@ function App() {
         high: Math.max(...(quote.high || [meta.regularMarketPrice || 0])),
         low: Math.min(...(quote.low || [meta.regularMarketPrice || 0])),
         volume: meta.regularMarketVolume || 0,
-        lastTrade: new Date(meta.regularMarketTime * 1000).toLocaleString('ko-KR'),
-        previousClose: previousClose
+        lastTrade: new Date((meta.postMarketTime || meta.regularMarketTime || meta.preMarketTime || Date.now() / 1000) * 1000).toLocaleString('ko-KR'),
+        previousClose: previousClose,
+        marketStatus: marketStatus,
+        isAfterHours: isAfterHours,
+        isPreMarket: isPreMarket,
+        isClosed: isClosed,
+        regularMarketPrice: meta.regularMarketPrice,
+        postMarketPrice: meta.postMarketPrice,
+        preMarketPrice: meta.preMarketPrice
       }
 
       setStockData(stockInfo)
@@ -160,7 +191,12 @@ function App() {
         {stockData && (
           <div className="stock-card">
             <div className="stock-header">
-              <h2>{stockData.symbol}</h2>
+              <div>
+                <h2>{stockData.symbol}</h2>
+                <span className={`market-status ${stockData.isAfterHours ? 'after-hours' : stockData.isPreMarket ? 'pre-market' : stockData.isClosed ? 'closed' : 'regular'}`}>
+                  {stockData.marketStatus}
+                </span>
+              </div>
               <div className="price-container">
                 <span className={`price ${stockData.change >= 0 ? 'positive' : 'negative'}`}>
                   ${stockData.price.toFixed(2)}
@@ -174,6 +210,16 @@ function App() {
                 {stockData.change >= 0 ? '↑' : '↓'} ${Math.abs(stockData.change).toFixed(2)} 
                 ({Math.abs(stockData.changePercent).toFixed(2)}%)
               </span>
+              {stockData.isAfterHours && stockData.regularMarketPrice && (
+                <div className="regular-market-info">
+                  <small>장중 종가: ${stockData.regularMarketPrice.toFixed(2)}</small>
+                </div>
+              )}
+              {stockData.isPreMarket && stockData.previousClose && (
+                <div className="regular-market-info">
+                  <small>전일 종가: ${stockData.previousClose.toFixed(2)}</small>
+                </div>
+              )}
             </div>
 
             <div className="stock-details">
