@@ -61,42 +61,76 @@ function App() {
 
       // 시장 상태 확인 및 가격 결정
       const marketState = meta.marketState || 'REGULAR'
-      const isAfterHours = marketState === 'POST' || marketState === 'POSTPOST'
-      const isPreMarket = marketState === 'PRE' || marketState === 'PREPRE'
-      const isClosed = marketState === 'CLOSED'
+      const previousClose = meta.previousClose || meta.chartPreviousClose || 0
+      
+      // 가격 값 확인 (null, undefined, 0 체크)
+      const regularPrice = meta.regularMarketPrice && meta.regularMarketPrice > 0 ? meta.regularMarketPrice : null
+      const postPrice = meta.postMarketPrice && meta.postMarketPrice > 0 ? meta.postMarketPrice : null
+      const prePrice = meta.preMarketPrice && meta.preMarketPrice > 0 ? meta.preMarketPrice : null
+      
+      // 시장 상태 판단 (가격 데이터 기반으로 더 정확하게)
+      let isAfterHours = false
+      let isPreMarket = false
+      let isClosed = false
+      let currentPrice = 0
+      let priceSource = ''
+      
+      // 에프터마켓: postMarketPrice가 있고 regularPrice와 다르면
+      if (postPrice && postPrice !== regularPrice) {
+        isAfterHours = true
+        currentPrice = postPrice
+        priceSource = '에프터마켓'
+      }
+      // 프리마켓: preMarketPrice가 있고 previousClose와 다르면
+      else if (prePrice && prePrice !== previousClose) {
+        isPreMarket = true
+        currentPrice = prePrice
+        priceSource = '프리마켓'
+      }
+      // 정규장: regularMarketPrice가 있으면
+      else if (regularPrice) {
+        currentPrice = regularPrice
+        priceSource = '정규장'
+      }
+      // 장마감: 가격이 없으면
+      else {
+        isClosed = true
+        currentPrice = previousClose
+        priceSource = '장마감'
+      }
+      
+      // marketState도 확인하여 보조 판단
+      if (marketState === 'POST' || marketState === 'POSTPOST') {
+        isAfterHours = true
+        if (postPrice) currentPrice = postPrice
+      } else if (marketState === 'PRE' || marketState === 'PREPRE') {
+        isPreMarket = true
+        if (prePrice) currentPrice = prePrice
+      } else if (marketState === 'CLOSED') {
+        isClosed = true
+      }
       
       console.log('📊 시장 상태 정보:', {
         marketState,
         isAfterHours,
         isPreMarket,
         isClosed,
-        regularMarketPrice: meta.regularMarketPrice,
-        postMarketPrice: meta.postMarketPrice,
-        preMarketPrice: meta.preMarketPrice,
-        previousClose: meta.previousClose
-      })
-      
-      // 현재 가격 결정: 에프터마켓 > 장중 > 프리마켓 > 전일 종가
-      const currentPrice = meta.postMarketPrice || meta.regularMarketPrice || meta.preMarketPrice || meta.previousClose || 0
-      const previousClose = meta.previousClose || currentPrice
-      
-      console.log('💰 가격 정보:', {
-        currentPrice,
+        regularPrice,
+        postPrice,
+        prePrice,
         previousClose,
-        priceSource: meta.postMarketPrice ? '에프터마켓' : meta.regularMarketPrice ? '장중' : meta.preMarketPrice ? '프리마켓' : '전일종가'
+        currentPrice,
+        priceSource
       })
       
-      // 변화량 계산 (에프터마켓이면 에프터마켓 기준, 아니면 장중 기준)
+      // 변화량 계산
       let change, changePercent
-      if (isAfterHours && meta.postMarketPrice) {
-        change = meta.postMarketPrice - previousClose
-        changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
-      } else if (isPreMarket && meta.preMarketPrice) {
-        change = meta.preMarketPrice - previousClose
+      if (currentPrice && previousClose) {
+        change = currentPrice - previousClose
         changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
       } else {
-        change = (meta.regularMarketPrice || currentPrice) - previousClose
-        changePercent = previousClose !== 0 ? (change / previousClose) * 100 : 0
+        change = 0
+        changePercent = 0
       }
       
       // 시장 상태 텍스트
@@ -112,6 +146,15 @@ function App() {
         marketStatus = '장마감'
         marketStatusDisplay = '장마감'
       }
+      
+      console.log('💰 최종 가격 정보:', {
+        currentPrice,
+        previousClose,
+        change,
+        changePercent,
+        priceSource,
+        marketStatusDisplay
+      })
       
       const stockInfo = {
         symbol: meta.symbol || symbol,
@@ -129,9 +172,10 @@ function App() {
         isAfterHours: isAfterHours,
         isPreMarket: isPreMarket,
         isClosed: isClosed,
-        regularMarketPrice: meta.regularMarketPrice,
-        postMarketPrice: meta.postMarketPrice,
-        preMarketPrice: meta.preMarketPrice
+        regularMarketPrice: regularPrice,
+        postMarketPrice: postPrice,
+        preMarketPrice: prePrice,
+        priceSource: priceSource
       }
 
       setStockData(stockInfo)
