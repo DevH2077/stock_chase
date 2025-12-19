@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import './App.css'
 
 function App() {
-  const [symbol, setSymbol] = useState('RKLB') // 기본값: 로켓랩 (Rocket Lab)
+  const [symbol] = useState('RKLB') // 기본값: 로켓랩 (Rocket Lab)
   const [stockData, setStockData] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState(null)
@@ -16,17 +16,6 @@ function App() {
     })
   }, [])
 
-  // 현재 가격 가져오기 (오류나 없으면 NULL 또는 0 반환)
-  const getCurrentPrice = () => {
-    if (!stockData || !stockData.price) {
-      return null
-    }
-    const price = parseFloat(stockData.price)
-    if (isNaN(price) || price === 0) {
-      return null
-    }
-    return price
-  }
 
   // 주식 가격 조회 (Yahoo Finance API 사용)
   const fetchStockPrice = async () => {
@@ -112,9 +101,17 @@ function App() {
       
       // 시장 상태 텍스트
       let marketStatus = '장중'
-      if (isAfterHours) marketStatus = '에프터마켓'
-      else if (isPreMarket) marketStatus = '프리마켓'
-      else if (isClosed) marketStatus = '장마감'
+      let marketStatusDisplay = '데이장'
+      if (isAfterHours) {
+        marketStatus = '에프터마켓'
+        marketStatusDisplay = '애프터 장'
+      } else if (isPreMarket) {
+        marketStatus = '프리마켓'
+        marketStatusDisplay = '프리마켓'
+      } else if (isClosed) {
+        marketStatus = '장마감'
+        marketStatusDisplay = '장마감'
+      }
       
       const stockInfo = {
         symbol: meta.symbol || symbol,
@@ -128,6 +125,7 @@ function App() {
         lastTrade: new Date((meta.postMarketTime || meta.regularMarketTime || meta.preMarketTime || Date.now() / 1000) * 1000).toLocaleString('ko-KR'),
         previousClose: previousClose,
         marketStatus: marketStatus,
+        marketStatusDisplay: marketStatusDisplay,
         isAfterHours: isAfterHours,
         isPreMarket: isPreMarket,
         isClosed: isClosed,
@@ -191,39 +189,20 @@ function App() {
       </header>
 
       <main className="app-main">
-        <div className="search-section">
-          <div className="input-group">
-            <label htmlFor="symbol">주식 심볼:</label>
-            <input
-              id="symbol"
-              type="text"
-              value={symbol}
-              onChange={(e) => setSymbol(e.target.value.toUpperCase())}
-              placeholder="예: AAPL, TSLA, MSFT"
-              className="symbol-input"
-            />
-            <button onClick={handleRefresh} disabled={loading} className="refresh-btn">
-              {loading ? '로딩...' : '새로고침'}
-            </button>
-          </div>
-          
-          {/* 현재 가격 표시 태그 */}
-          {stockData && (
-            <div className="current-price-tag">
-              <span className="price-label">현재 가격:</span>
-              <span className="price-value">
-                {getCurrentPrice() !== null 
-                  ? `$${getCurrentPrice().toFixed(2)}` 
-                  : 'NULL'}
-              </span>
-              {stockData.isAfterHours && stockData.regularMarketPrice && (
-                <span className="price-source">(에프터마켓)</span>
-              )}
-              {stockData.isPreMarket && (
-                <span className="price-source">(프리마켓)</span>
-              )}
+        {/* 현재 장 상태 표시 */}
+        {stockData && (
+          <div className="market-status-banner">
+            <div className="market-status-text">
+              현재 장은 <span className="market-status-highlight">{stockData.marketStatusDisplay}</span>입니다
             </div>
-          )}
+          </div>
+        )}
+
+        {/* 업데이트 버튼 */}
+        <div className="control-section">
+          <button onClick={handleRefresh} disabled={loading} className="refresh-btn-large">
+            {loading ? '로딩...' : '🔄 업데이트'}
+          </button>
         </div>
 
         {error && (
@@ -314,12 +293,11 @@ function App() {
         )}
 
         <div className="info-section">
-          <h3>사용 방법</h3>
-          <ol>
-            <li>주식 심볼을 입력하세요 (예: AAPL, TSLA, MSFT 등)</li>
+          <h3>앱 정보</h3>
+          <ul>
             <li>1분마다 자동으로 시세가 업데이트됩니다</li>
             <li>앱을 홈 화면에 추가하면 언제든지 빠르게 접근할 수 있습니다</li>
-          </ol>
+          </ul>
           
           <div className="api-note">
             <strong>API 정보:</strong> 이 앱은 <strong>Yahoo Finance API</strong>를 사용합니다. 
